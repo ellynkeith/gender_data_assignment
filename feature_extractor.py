@@ -8,7 +8,6 @@ from nltk.util import ngrams
 import time
 import gensim
 import statistics
-import pickle
 
 print("loading model ", time.time())
 model = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True) 
@@ -47,10 +46,6 @@ def preprocess():
 	stemmed_text = [['<RARE>' if w in rarewords_list else w for w in line] for line in stemmed_text]
 	# note that source_text will be lowercased, but only stemmed_text will have rare words removed
 
-	pickle.dump(stemmed_text, open('stemmed_text.pkl','wb'))
-	pickle.dump(tokenized_text, open('tokenized_text.pkl','wb'))
-	pickle.dump(pos_tags, open ('pos_tags.pkl', 'wb'))
-
 def bag_of_function_words():
 	print("bag of function words ", time.time())
 	bow = []
@@ -84,9 +79,8 @@ def most_common(text, n, ngramCount):
 
 	return [x[0] for x in ngramFreqDist.most_common(n)]
 
-## LEFT OFF HERE
-## These are returing characters noooooo
 ## ngram features
+## Added character level trigrams and bigrams
 def bag_of_character_trigrams():
 	print("bag of character trigrams ", time.time())
 	top_500_trigrams = most_common(source_text, 500, 3)
@@ -205,7 +199,6 @@ def words_per_sentence():
 	return word_avgs, "word_avgs"
 
 ## word vector feature
-## stopwords should be removed for this--not done yet
 def makeAvgWordVec(doc, model):
 	'''
 	param doc: string of text
@@ -214,12 +207,12 @@ def makeAvgWordVec(doc, model):
 	'''
 	featureVec = np.zeros((1,300), dtype="float32")
 	vec = []
-	## for loop instead of list comprehension to have word count
-	## is there a better way to do this, given that for loops take longer?
+	## append each word vector to list
 	for word in doc:
 		if word in model.vocab:
 			vec.append(model[word])
 
+	## convert list to array, return mean of rows		
 	featureVec = np.array(vec).mean(axis = 0)
 	
 	return featureVec
@@ -231,6 +224,7 @@ def avg_feature_vecs(text, model):
 	return: list of averaged word vectors
 	'''
 	print("avg feature vecs", time.time())
+	## remove stopwords
 	text = [[word for word in line if word not in nltk.corpus.stopwords.words('english')] for line in text]
 	textFeatureVecs = np.zeros((len(text), 300), dtype="float32")
 	for i in range(len(text)):
@@ -254,21 +248,8 @@ def extract_features(text, conf):
 	source_text = text			# we'll use global variables to pass the data around
 	preprocess()
 
-	## not sure why this try/except makes it grumpy
-	# try:
-	# 	stemmed_text = pickle.load(open('stemmed_text.p','rb'))
-	# 	print(stemmed_text[0][0])
-	# 	tokenized_text = pickle.load(open('tokenized_text.p','rb'))
-	# 	print(tokenized_text[0][0])
-	#	pos_tags = pickle.load(open('pos_tags.pkl', 'rb'))
-	# except:
-	# 	source_text = text			# we'll use global variables to pass the data around
-	# 	preprocess()
-	
-
 	features = []		# features will be list of lists, each component list will have the same length as the list of input text
 	header = []
-
 
 	#extract requested features: FILL IN HERE
 	if 'bag_of_function_words' in conf or all:
@@ -301,11 +282,11 @@ def extract_features(text, conf):
 		header.extend(hvec)
 		log(fvec, hvec)
 
-	# if 'bag_of_pos_unigrams' in conf or all:
-	# 	fvec, hvec = bag_of_pos_unigrams()
-	# 	features.extend(fvec)
-	# 	header.extend(hvec)
-	# 	log(fvec, hvec)
+	if 'bag_of_pos_unigrams' in conf or all:
+		fvec, hvec = bag_of_pos_unigrams()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)
 
 	if 'bag_of_trigrams' in conf or all:
 		fvec, hvec = bag_of_trigrams()
@@ -319,29 +300,29 @@ def extract_features(text, conf):
 		header.extend(hvec)
 		log(fvec, hvec)
 
-	# if 'bag_of_unigrams' in conf or all:
-	# 	fvec, hvec = bag_of_unigrams()
-	# 	features.extend(fvec)
-	# 	header.extend(hvec)
-	# 	log(fvec, hvec)	
+	if 'bag_of_unigrams' in conf or all:
+		fvec, hvec = bag_of_unigrams()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)	
 
-	# if 'characters_per_word' in conf or all:
-	# 	fvec, hvec = characters_per_word()
-	# 	features.extend(fvec)
-	# 	header.extend(hvec)
-	# 	log(fvec, hvec)	
+	if 'characters_per_word' in conf or all:
+		fvec, hvec = characters_per_word()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)	
 
-	# if 'unique_words_ratio' in conf or all:
-	# 	fvec, hvec = unique_words_ratio()
-	# 	features.extend(fvec)
-	# 	header.extend(hvec)
-	# 	log(fvec, hvec)
+	if 'unique_words_ratio' in conf or all:
+		fvec, hvec = unique_words_ratio()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)
 
-	# if 'words_per_sentence' in conf or all:
-	# 	fvec, hvec = words_per_sentence()
-	# 	features.extend(fvec)
-	# 	header.extend(hvec)
-	# 	log(fvec, hvec)
+	if 'words_per_sentence' in conf or all:
+		fvec, hvec = words_per_sentence()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)
 
 	if 'avg_feature_vecs' in conf or all:
 		fvec, hvec = avg_feature_vecs(tokenized_text, model)
@@ -350,7 +331,7 @@ def extract_features(text, conf):
 		log(fvec, hvec)
 
 	features = np.asarray(features).T.tolist() # transpose list of lists so its dimensions are #instances x #features
-	## feature vectors don't seem to be getting transposed
+	## something weird and inefficient is happening here--vectors are getting transposed when returned from function, and then again here--redundant?
 
 	with open('features.csv', 'w') as ffile:
 		fwriter = csv.writer(ffile)
