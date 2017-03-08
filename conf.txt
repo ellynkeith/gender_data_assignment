@@ -9,3 +9,6 @@ topic_model_scores
 characters_per_word
 unique_words_ratio
 words_per_sentence
+avg_feature_vecs
+bag_of_character_trigrams
+bag_of_character_bigrams
