@@ -4,14 +4,14 @@ import nltk
 import numpy as np
 import re
 import csv
-import pickle
 from nltk.util import ngrams
 import time
 import gensim
 import statistics
+import pickle
 
-# print("loading model ", time.time())
-# model = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True) 
+print("loading model ", time.time())
+model = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True) 
 
 source_text = []
 stemmed_text = []
@@ -24,32 +24,32 @@ def preprocess():
 	global source_text
 	source_text = [text.lower() for text in source_text]
 
-	# # tokenize
-	# print("tokenzing ", time.time())
-	# global tokenized_text
-	# tokenized_text = [nltk.word_tokenize(text) for text in source_text]
+	# tokenize
+	print("tokenzing ", time.time())
+	global tokenized_text
+	tokenized_text = [nltk.word_tokenize(text) for text in source_text]
 
-	# # pos tags in preprocessing step
-	# print("pos tagging ", time.time())
-	# global pos_tags
-	# pos_tags = [[pos[1] for pos in nltk.pos_tag(text)] for text in tokenized_text]
+	# pos tags in preprocessing step
+	print("pos tagging ", time.time())
+	global pos_tags
+	pos_tags = [[pos[1] for pos in nltk.pos_tag(text)] for text in tokenized_text]
 	
-	# # stem
-	# print("stemming ", time.time())
-	# porter = nltk.PorterStemmer()
-	# global stemmed_text
-	# stemmed_text = [[porter.stem(t) for t in tokens] for tokens in tokenized_text]
+	# stem
+	print("stemming ", time.time())
+	porter = nltk.PorterStemmer()
+	global stemmed_text
+	stemmed_text = [[porter.stem(t) for t in tokens] for tokens in tokenized_text]
 
-	# # remove rare
-	# print("removing rare ", time.time())
-	# vocab = nltk.FreqDist(w for line in stemmed_text for w in line)
-	# rarewords_list = set(vocab.hapaxes())
-	# stemmed_text = [['<RARE>' if w in rarewords_list else w for w in line] for line in stemmed_text]
-	# # note that source_text will be lowercased, but only stemmed_text will have rare words removed
+	# remove rare
+	print("removing rare ", time.time())
+	vocab = nltk.FreqDist(w for line in stemmed_text for w in line)
+	rarewords_list = set(vocab.hapaxes())
+	stemmed_text = [['<RARE>' if w in rarewords_list else w for w in line] for line in stemmed_text]
+	# note that source_text will be lowercased, but only stemmed_text will have rare words removed
 
-	# pickle.dump(stemmed_text, open('stemmed_text.pkl','wb'))
-	# pickle.dump(tokenized_text, open('tokenized_text.pkl','wb'))
-	# pickle.dump(pos_tags, open ('pos_tags.pkl', 'wb'))
+	pickle.dump(stemmed_text, open('stemmed_text.pkl','wb'))
+	pickle.dump(tokenized_text, open('tokenized_text.pkl','wb'))
+	pickle.dump(pos_tags, open ('pos_tags.pkl', 'wb'))
 
 def bag_of_function_words():
 	print("bag of function words ", time.time())
@@ -85,67 +85,96 @@ def most_common(text, n, ngramCount):
 	return [x[0] for x in ngramFreqDist.most_common(n)]
 
 ## LEFT OFF HERE
-## LISTS ARE INSIDE OUT AND BACKWARDS
+## These are returing characters noooooo
 ## ngram features
-def bag_of_pos_trigrams():
-	print("bag of pos trigrams ", time.time())
-	top_500_trigrams = most_common(source_text, 10, 3)
+def bag_of_character_trigrams():
+	print("bag of character trigrams ", time.time())
+	top_500_trigrams = most_common(source_text, 500, 3)
+	print('top char trigram ', top_500_trigrams[0])
 
 	print('making essay freq dists ', time.time())
 	essay_fds = [nltk.FreqDist(ngrams(essay, 3)) for essay in source_text]
-	print([[essay_fd[tg] for tg in top_500_trigrams] for essay_fd in essay_fds][:3])
 	print('counting trigrams ', time.time())
-	#trigram_counts = [[essay_fd[tg] for tg in top_500_trigrams] for essay_fd in essay_fds]
+	trigram_counts = [[essay_fd[tg] for tg in top_500_trigrams] for essay_fd in essay_fds]
 #	trigram_counts = [[tg for essay_fd[tg] in essay_fds] for trigram in top_500_trigrams]
 	print('trigram: ',len(trigram_counts), len(trigram_counts[0]))
-	return trigram_counts, top_500_trigrams
+	return np.asarray(trigram_counts).T.tolist(), "top_500_char_trigrams"
+
+def bag_of_pos_trigrams():
+	print("bag of pos trigrams ", time.time())
+	top_500_trigrams = most_common(pos_tags, 500, 3)
+	print('top pos trigram ', top_500_trigrams[0])
+
+	print('making essay freq dists ', time.time())
+	essay_fds = [nltk.FreqDist(ngrams(essay, 3)) for essay in pos_tags]
+	print('counting trigrams ', time.time())
+	trigram_counts = [[essay_fd[tg] for tg in top_500_trigrams] for essay_fd in essay_fds]
+#	trigram_counts = [[tg for essay_fd[tg] in essay_fds] for trigram in top_500_trigrams]
+	print('trigram: ',len(trigram_counts), len(trigram_counts[0]))
+	return np.asarray(trigram_counts).T.tolist(), "top_500_pos_trigrams"
+
+def bag_of_character_bigrams():
+	print("bag of char bigrams ", time.time())
+	top_100_bigrams = most_common(source_text, 100, 2)
+	print('top char bigram ', top_100_bigrams[0])
+
+	print('making essay freq dists ', time.time())
+	essay_fds = [nltk.FreqDist(ngrams(essay, 2)) for essay in source_text]
+	print('counting bigrams ', time.time())
+	bigram_counts = [[essay_fd[bg] for bg in top_100_bigrams] for essay_fd in essay_fds]
+	return np.asarray(bigram_counts).T.tolist(), "top_100_char_bigrams"
 
 def bag_of_pos_bigrams():
 	print("bag of pos bigrams ", time.time())
 	top_100_bigrams = most_common(pos_tags, 100, 2)
+	print('top pos bigram ', top_100_bigrams[0])
 
 	print('making essay freq dists ', time.time())
 	essay_fds = [nltk.FreqDist(ngrams(essay, 2)) for essay in pos_tags]
 	print('counting bigrams ', time.time())
 	bigram_counts = [[essay_fd[bg] for bg in top_100_bigrams] for essay_fd in essay_fds]
-	print('bigram: ',len(bigram_counts), len(bigram_counts[0]))
-	return bigram_counts, top_100_bigrams
+	return np.asarray(bigram_counts).T.tolist(), "top_100_pos_bigrams"
 
 def bag_of_pos_unigrams():
 	print("bag of pos unigrams ", time.time())
 	bag_of_pos_unigrams = make_ngrams(pos_tags, 1)
+	print('here is a pos unigram ', bag_of_pos_unigrams[0])
+
 	essay_fds = [nltk.FreqDist(ngrams(essay, 1)) for essay in pos_tags]
 	print('counting unigrams ', time.time())
 	unigram_counts = [[essay_fd[ng] for ng in bag_of_pos_unigrams] for essay_fd in essay_fds]
-	return unigram_counts, bag_of_pos_unigrams
+	return np.asarray(unigram_counts).T.tolist(), "bag_of_pos_unigrams"
 
 def bag_of_trigrams():
 	print("bag of trigrams ", time.time())
 	top_500_trigrams = most_common(stemmed_text, 500, 3)
+	print('top trigram ', top_500_trigrams[0])
 
 	print('making essay freq dists ', time.time())
 	essay_fds = [nltk.FreqDist(ngrams(essay, 3)) for essay in stemmed_text]
 	print('counting trigrams ', time.time())
 	trigram_counts = [[essay_fd[tg] for tg in top_500_trigrams] for essay_fd in essay_fds]
-	return trigram_counts, top_500_trigrams
+	return np.asarray(trigram_counts).T.tolist(), "top_500_trigrams"
 
 def bag_of_bigrams():
 	print("bag of bigrams ", time.time())
 	top_100_bigrams = most_common(stemmed_text, 100, 2)
+	print('top bigram ', top_100_bigrams[0])
 
 	print('making essay freq dists ', time.time())
 	essay_fds = [nltk.FreqDist(ngrams(essay, 2)) for essay in stemmed_text]
 	print('counting bigrams ', time.time())
 	bigram_counts = [[essay_fd[bg] for bg in top_100_bigrams] for essay_fd in essay_fds]
-	return bigram_counts, top_100_bigrams
+	return np.asarray(bigram_counts).T.tolist(), "top_100_bigrams"
 
 def bag_of_unigrams():
 	print("bag of unigrams ", time.time())
 	bag_of_unigrams = make_ngrams(stemmed_text, 1)
+	print('and a unigram ', bag_of_unigrams[0])
 	essay_fds = [nltk.FreqDist(ngrams(essay, 1)) for essay in stemmed_text]
 	print('counting unigrams ', time.time())
 	unigram_counts = [[essay_fd[ng] for ng in bag_of_unigrams] for essay_fd in essay_fds]
-	return unigram_counts, bag_of_unigrams
+	return np.asarray(unigram_counts).T.tolist(), "bag_of_unigrams"
 
 ## complexity features
 def characters_per_word():
@@ -184,13 +213,15 @@ def makeAvgWordVec(doc, model):
 	return: average word vector for given string
 	'''
 	featureVec = np.zeros((1,300), dtype="float32")
-	nwords = 0
+	vec = []
 	## for loop instead of list comprehension to have word count
+	## is there a better way to do this, given that for loops take longer?
 	for word in doc:
-		if word in set(model.index2word):
-			nwords += 1
-			featureVec = np.add(featureVec, model[word])
-	featureVec = np.divide(featureVec, nwords)
+		if word in model.vocab:
+			vec.append(model[word])
+
+	featureVec = np.array(vec).mean(axis = 0)
+	
 	return featureVec
 
 def avg_feature_vecs(text, model):
@@ -200,17 +231,12 @@ def avg_feature_vecs(text, model):
 	return: list of averaged word vectors
 	'''
 	print("avg feature vecs", time.time())
-	counter = 0
+	text = [[word for word in line if word not in nltk.corpus.stopwords.words('english')] for line in text]
 	textFeatureVecs = np.zeros((len(text), 300), dtype="float32")
-	for doc in text:
-		## not sure why this isn't working
-#         if counter%1000 == 0:
-#             print(type(counter), type(len(text)))
-#             print("doc %d of %d") %(counter, len(doc))
-
-		textFeatureVecs[counter] = makeAvgWordVec(doc, model)
-		counter += 1
-		return textFeatureVecs, "avgFeatureVecs"
+	for i in range(len(text)):
+		textFeatureVecs[i] = makeAvgWordVec(text[i], model)
+		
+	return np.asarray(textFeatureVecs).T.tolist(), "avgFeatureVecs"
 
 def log(fvec, hvec):
 	with open('log.csv', 'a') as lfile:
@@ -244,12 +270,18 @@ def extract_features(text, conf):
 	header = []
 
 
-	# extract requested features: FILL IN HERE
-	# if 'bag_of_function_words' in conf or all:
-	# 	fvec, hvec = bag_of_function_words()
-	# 	features.extend(fvec)
-	# 	header.extend(hvec)
-	# 	log(fvec, hvec)
+	#extract requested features: FILL IN HERE
+	if 'bag_of_function_words' in conf or all:
+		fvec, hvec = bag_of_function_words()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)
+
+	if 'bag_of_character_trigrams' in conf or all:
+		fvec, hvec = bag_of_character_trigrams()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)
 
 	if 'bag_of_pos_trigrams' in conf or all:
 		fvec, hvec = bag_of_pos_trigrams()
@@ -257,11 +289,17 @@ def extract_features(text, conf):
 		header.extend(hvec)
 		log(fvec, hvec)
 
-	# if 'bag_of_pos_bigrams' in conf or all:
-	# 	fvec, hvec = bag_of_pos_bigrams()
-	# 	features.extend(fvec)
-	# 	header.extend(hvec)
-	# 	log(fvec, hvec)
+	if 'bag_of_pos_bigrams' in conf or all:
+		fvec, hvec = bag_of_pos_bigrams()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)
+
+	if 'bag_of_character_bigrams' in conf or all:
+		fvec, hvec = bag_of_character_bigrams()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)
 
 	# if 'bag_of_pos_unigrams' in conf or all:
 	# 	fvec, hvec = bag_of_pos_unigrams()
@@ -269,17 +307,17 @@ def extract_features(text, conf):
 	# 	header.extend(hvec)
 	# 	log(fvec, hvec)
 
-	# if 'bag_of_trigrams' in conf or all:
-	# 	fvec, hvec = bag_of_trigrams()
-	# 	features.extend(fvec)
-	# 	header.extend(hvec)
-	# 	log(fvec, hvec)
+	if 'bag_of_trigrams' in conf or all:
+		fvec, hvec = bag_of_trigrams()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)
 
-	# if 'bag_of_bigrams' in conf or all:
-	# 	fvec, hvec = bag_of_bigrams()
-	# 	features.extend(fvec)
-	# 	header.extend(hvec)
-	# 	log(fvec, hvec)
+	if 'bag_of_bigrams' in conf or all:
+		fvec, hvec = bag_of_bigrams()
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)
 
 	# if 'bag_of_unigrams' in conf or all:
 	# 	fvec, hvec = bag_of_unigrams()
@@ -305,11 +343,11 @@ def extract_features(text, conf):
 	# 	header.extend(hvec)
 	# 	log(fvec, hvec)
 
-	# if 'avg_feature_vecs' in conf or all:
-	# 	fvec, hvec = avg_feature_vecs(tokenized_text, model)
-	# 	features.extend(fvec)
-	# 	header.extend(hvec)
-	# 	log(fvec, hvec)
+	if 'avg_feature_vecs' in conf or all:
+		fvec, hvec = avg_feature_vecs(tokenized_text, model)
+		features.extend(fvec)
+		header.extend(hvec)
+		log(fvec, hvec)
 
 	features = np.asarray(features).T.tolist() # transpose list of lists so its dimensions are #instances x #features
 	## feature vectors don't seem to be getting transposed
